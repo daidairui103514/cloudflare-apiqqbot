@@ -14,12 +14,13 @@ export default function QQBotPage() {
 
   useEffect(() => {
     fetch("/api/qqbot")
-      .then(res => res.json())
-      .then(data => {
-         if (Object.keys(data).length > 0) {
-            setConfig(data);
+      .then((res) => res.json())
+      .then((data) => {
+         if (data && !data.error && Object.keys(data).length > 0) {
+            setConfig(prev => ({ ...prev, ...data }));
          }
-      });
+      })
+      .catch(() => {});
   }, []);
 
   const handleSave = async () => {

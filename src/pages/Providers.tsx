@@ -22,7 +22,11 @@ export default function ProvidersPage() {
     fetch("/api/models")
       .then((res) => res.json())
       .then((data) => {
-        setModels(data);
+        if (Array.isArray(data)) {
+           setModels(data);
+        } else if (data.error) {
+           setError("加载失败: " + data.error);
+        }
         setLoading(false);
       })
       .catch(() => {

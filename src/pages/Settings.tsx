@@ -16,15 +16,21 @@ export default function SettingsPage() {
   useEffect(() => {
     fetch("/api/models")
       .then(res => res.json())
-      .then(data => setModels(data));
+      .then(data => {
+         if (Array.isArray(data)) {
+            setModels(data);
+         }
+      })
+      .catch(() => {});
 
     fetch("/api/settings")
       .then(res => res.json())
       .then(data => {
-         if (Object.keys(data).length > 0) {
-            setSettings(data);
+         if (data && !data.error && Object.keys(data).length > 0) {
+            setSettings(prev => ({ ...prev, ...data }));
          }
-      });
+      })
+      .catch(() => {});
   }, []);
 
   const handleSave = async () => {
@@ -72,13 +78,13 @@ export default function SettingsPage() {
         <div className="space-y-2">
           <label className="text-sm font-semibold text-gray-900">默认调用模型节点</label>
           <select
-            value={settings.defaultModelId}
+            value={settings?.defaultModelId || ""}
             onChange={(e) => setSettings({ ...settings, defaultModelId: e.target.value })}
             className="w-full bg-white border border-gray-300 rounded-md p-2.5 text-sm text-gray-900 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
           >
             <option value="">请选择默认模型...</option>
-            {models.map(m => (
-              <option key={m.id} value={m.id}>{m.name} ({m.modelCode})</option>
+            {Array.isArray(models) && models.filter(Boolean).map(m => (
+              <option key={m.id || Math.random()} value={m.id || ""}>{m.name || m.modelCode || "未命名"}</option>
             ))}
           </select>
           <p className="text-xs flex items-center gap-1 text-gray-500 mt-1">
@@ -91,7 +97,7 @@ export default function SettingsPage() {
           <label className="text-sm font-semibold text-gray-900">全局提示词 (System Prompt)</label>
           <textarea
             rows={5}
-            value={settings.systemPrompt}
+            value={settings?.systemPrompt || ""}
             onChange={(e) => setSettings({ ...settings, systemPrompt: e.target.value })}
             className="w-full bg-white border border-gray-300 rounded-md p-3 text-sm text-gray-900 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all resize-none"
             placeholder="指引 AI 该以何种身份及语气进行沟通..."
@@ -102,15 +108,15 @@ export default function SettingsPage() {
           <div className="space-y-3">
              <label className="text-sm font-semibold text-gray-900 flex justify-between items-center">
                  上下文记忆轮数 
-                 <span className="text-indigo-700 font-mono bg-indigo-50 text-xs px-2 py-0.5 rounded-full border border-indigo-100">{settings.contextRounds} 轮</span>
+                 <span className="text-indigo-700 font-mono bg-indigo-50 text-xs px-2 py-0.5 rounded-full border border-indigo-100">{settings?.contextRounds ?? 10} 轮</span>
              </label>
              <input
                type="range"
                min="0"
                max="50"
                step="1"
-               value={settings.contextRounds}
-               onChange={(e) => setSettings({ ...settings, contextRounds: parseInt(e.target.value) })}
+               value={settings?.contextRounds ?? 10}
+               onChange={(e) => setSettings({ ...settings, contextRounds: parseInt(e.target.value) || 0 })}
                className="w-full accent-indigo-600 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer mt-4"
              />
              <p className="text-xs text-gray-500 mt-2">控制传入目标后台前合并多少次历史记录。0 表示单轮无记忆。</p>
@@ -122,7 +128,7 @@ export default function SettingsPage() {
                  <input 
                     type="checkbox" 
                     className="sr-only peer" 
-                    checked={settings.streamEnabled}
+                    checked={!!settings?.streamEnabled}
                     onChange={(e) => setSettings({ ...settings, streamEnabled: e.target.checked })}
                  />
                  <div className="w-10 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>

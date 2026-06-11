@@ -6,10 +6,12 @@ import { cn } from "./utils";
 import ProvidersPage from "./pages/Providers";
 import SettingsPage from "./pages/Settings";
 import QQBotPage from "./pages/QQBot";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 
 export default function App() {
   return (
-    <div className="flex h-screen w-full bg-gray-50 text-gray-900 font-sans">
+    <ErrorBoundary>
+      <div className="flex h-screen w-full bg-gray-50 text-gray-900 font-sans">
       {/* Sidebar Navigation */}
       <nav className="w-64 border-r border-gray-200 bg-white flex flex-col z-10 shadow-sm">
         <div className="px-6 py-8 flex items-center gap-3 border-b border-gray-100">
@@ -76,5 +78,6 @@ export default function App() {
         </Routes>
       </main>
     </div>
+    </ErrorBoundary>
   );
 }
