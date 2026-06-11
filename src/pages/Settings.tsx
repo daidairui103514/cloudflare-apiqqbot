@@ -37,14 +37,19 @@ export default function SettingsPage() {
     setSaving(true);
     setSuccessMsg("");
     try {
-      await fetch("/api/settings", {
+      const res = await fetch("/api/settings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(settings),
       });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+         throw new Error(data?.error || "保存失败");
+      }
       setSuccessMsg("全局参数已保存！");
       setTimeout(() => setSuccessMsg(""), 3000);
     } catch (err: any) {
+      alert(err.message);
       console.error(err);
     } finally {
       setSaving(false);

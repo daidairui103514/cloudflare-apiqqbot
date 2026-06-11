@@ -27,14 +27,19 @@ export default function QQBotPage() {
     setSaving(true);
     setSuccessMsg("");
     try {
-      await fetch("/api/qqbot", {
+      const res = await fetch("/api/qqbot", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(config),
       });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+         throw new Error(data?.error || "保存失败");
+      }
       setSuccessMsg("QQ 机器人配置已保存！");
       setTimeout(() => setSuccessMsg(""), 3000);
     } catch (err: any) {
+      alert(err.message);
       console.error(err);
     } finally {
       setSaving(false);

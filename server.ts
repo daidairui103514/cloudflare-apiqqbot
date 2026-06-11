@@ -112,7 +112,7 @@ app.get("/api/models", (req, res) => {
 // Update models array
 app.post("/api/models", (req, res) => {
   try {
-    const newModels = req.body.models;
+    const newModels = Array.isArray(req.body) ? req.body : req.body.models;
     if (Array.isArray(newModels)) {
       storedModels = newModels;
       res.json({ success: true, count: storedModels.length });

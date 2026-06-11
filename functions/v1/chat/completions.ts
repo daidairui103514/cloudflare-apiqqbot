@@ -1,7 +1,7 @@
 export async function onRequestPost({ request, env }) {
   const db = env.API_DB;
   if (!db) {
-    return Response.json({ error: { message: "未绑定 Cloudflare KV: API_DB" } }, { status: 500 });
+    return Response.json({ error: { message: "未绑定 Cloudflare KV: API_DB，请在 Cloudflare Pages 设置中绑定 KV 命名空间" } }, { status: 500 });
   }
 
   try {

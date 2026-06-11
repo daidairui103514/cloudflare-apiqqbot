@@ -43,9 +43,12 @@ export default function ProvidersPage() {
       const res = await fetch("/api/models", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ models }),
+        body: JSON.stringify(models),
       });
-      if (!res.ok) throw new Error("保存更改失败。");
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        throw new Error(data?.error || "保存更改失败。");
+      }
       setSuccessMsg("配置已成功保存！");
       setTimeout(() => setSuccessMsg(""), 3000);
     } catch (err: any) {
