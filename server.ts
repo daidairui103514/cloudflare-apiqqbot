@@ -9,26 +9,62 @@ const PORT = 3000;
 
 app.use(express.json());
 
-// --- Auth Setup ---
+// --- Auth Setup & Storage ---
+interface AppUser {
+  id: string;
+  username: string;
+  password?: string;
+  role: "admin" | "guest";
+  apiKey?: string;
+  createdAt: string;
+}
+
 const adminUser = process.env.ADMIN_USER || "admin";
 const adminPass = process.env.ADMIN_PASSWORD || "admin";
-const guestUser = process.env.GUEST_USER || "guest";
-const guestPass = process.env.GUEST_PASSWORD || "guest";
 
-const activeSessions: Record<string, { role: "admin" | "guest" }> = {};
+let storedUsers: AppUser[] = [];
+const activeSessions: Record<string, { role: "admin" | "guest", username: string, apiKey?: string }> = {};
+let validRegistrationCodes: string[] = [];
+
+app.post("/api/register", (req, res) => {
+   const { username, password, registrationCode } = req.body;
+   if (!registrationCode || !validRegistrationCodes.includes(registrationCode)) {
+      return res.status(400).json({error: "无效或不存在的注册码"});
+   }
+   if(storedUsers.some(u => u.username === username) || username === adminUser) {
+     return res.status(400).json({error: "该用户名已被使用或保留"});
+   }
+   // Remove the code since it is used
+   validRegistrationCodes = validRegistrationCodes.filter(c => c !== registrationCode);
+
+   const newUser: AppUser = {
+     id: uuidv4(),
+     username,
+     password,
+     role: "guest",
+     apiKey: "sk-" + uuidv4().replace(/-/g, ""),
+     createdAt: new Date().toISOString()
+   };
+   storedUsers.push(newUser);
+   return res.json({success: true});
+});
 
 app.post("/api/login", (req, res) => {
   const { username, password } = req.body;
+  
   if (username === adminUser && password === adminPass) {
     const token = uuidv4();
-    activeSessions[token] = { role: "admin" };
-    return res.json({ token, role: "admin" });
+    activeSessions[token] = { role: "admin", username, apiKey: "" };
+    return res.json({ token, role: "admin", username, apiKey: "" });
   }
-  if (username === guestUser && password === guestPass) {
-    const token = uuidv4();
-    activeSessions[token] = { role: "guest" };
-    return res.json({ token, role: "guest" });
+
+  const u = storedUsers.find(user => user.username === username && user.password === password);
+  if(u) {
+     const token = uuidv4();
+     activeSessions[token] = { role: u.role, username: u.username, apiKey: u.apiKey };
+     return res.json({ token, role: u.role, username: u.username, apiKey: u.apiKey });
   }
+
   return res.status(401).json({ error: "账号或密码错误" });
 });
 
@@ -37,7 +73,8 @@ app.get("/api/me", (req, res) => {
   if (!token || !activeSessions[token]) {
     return res.status(401).json({ error: "未登录" });
   }
-  res.json({ role: activeSessions[token].role });
+  const session = activeSessions[token];
+  res.json({ role: session.role, username: session.username, apiKey: session.apiKey });
 });
 
 app.post("/api/logout", (req, res) => {
@@ -56,12 +93,53 @@ const requireAuth = (req: express.Request, res: express.Response, next: express.
 };
 
 const requireAdmin = (req: express.Request, res: express.Response, next: express.NextFunction) => {
-  const user = (req as any).user;
-  if (!user || user.role !== "admin") {
+  const token = req.headers.authorization?.split(" ")[1];
+  if (!token || !activeSessions[token] || activeSessions[token].role !== "admin") {
     return res.status(403).json({ error: "普通成员无权执行此操作" });
   }
   next();
 };
+
+app.get("/api/users", requireAdmin, (req, res) => {
+   res.json(storedUsers.filter(u => u.role === "guest").map(u => ({ id: u.id, username: u.username, createdAt: u.createdAt, apiKey: u.apiKey })));
+});
+
+app.post("/api/users/add", requireAdmin, (req, res) => {
+   const { username, password } = req.body;
+   if(storedUsers.some(u => u.username === username) || username === adminUser) {
+     return res.status(400).json({error: "该用户名已被使用或保留"});
+   }
+   const newUser: AppUser = {
+     id: uuidv4(),
+     username,
+     password,
+     role: "guest",
+     apiKey: "sk-" + uuidv4().replace(/-/g, ""),
+     createdAt: new Date().toISOString()
+   };
+   storedUsers.push(newUser);
+   res.json({ success: true, user: { id: newUser.id, username: newUser.username, createdAt: newUser.createdAt, apiKey: newUser.apiKey } });
+});
+
+app.delete("/api/users/:id", requireAdmin, (req, res) => {
+   storedUsers = storedUsers.filter(u => u.id !== req.params.id);
+   res.json({ success: true });
+});
+
+app.get("/api/registration-codes", requireAdmin, (req, res) => {
+   res.json({ codes: validRegistrationCodes });
+});
+
+app.post("/api/registration-codes/generate", requireAdmin, (req, res) => {
+   const newCode = Array.from({ length: 4 }, () => Math.random().toString(36).substring(2, 6)).join('-').toUpperCase();
+   validRegistrationCodes.push(newCode);
+   res.json({ success: true, code: newCode });
+});
+
+app.delete("/api/registration-codes/:code", requireAdmin, (req, res) => {
+   validRegistrationCodes = validRegistrationCodes.filter(c => c !== req.params.code);
+   res.json({ success: true });
+});
 
 // --- In-memory simple storage for configuration ---
 let storedModels: ProviderModel[] = [
@@ -213,44 +291,30 @@ app.post("/api/detect-models", requireAdmin, async (req, res) => {
         return res.status(response.status).json({ error: `API Error: ${response.status} ${await response.text()}` });
      }
      
-     const data = await response.json();
+     const responseText = await response.text();
+     let data;
+     try {
+        data = JSON.parse(responseText);
+     } catch (parseError) {
+        return res.status(500).json({ error: "API返回了非JSON数据 (通常是由于网关屏蔽或无效服务URL)。" });
+     }
      res.json(data);
   } catch(e: any) {
      res.status(500).json({ error: e.message });
   }
 });
 
-// Get QQ Bot Config
-app.get("/api/qqbot", (req, res) => {
-  res.json(qqBotConfig);
+
+// Catch matching /api requests that aren't defined -> return 404 JSON instead of HTML
+app.use("/api", (req, res) => {
+  res.status(404).json({ error: "API Route Not Found" });
 });
 
-// Update QQ Bot Config
-app.post("/api/qqbot", (req, res) => {
-  qqBotConfig = { ...qqBotConfig, ...req.body };
-  res.json({ success: true });
+// Global Express Error Handler -> returns JSON instead of default HTML
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error("Express Error:", err);
+  res.status(500).json({ error: "Internal Server Error", message: err?.message || String(err) });
 });
-
-
-// --- QQ Bot Webhook Routing Logic (Mock/Placeholder for Cloudflare) ---
-// This is the active webhook that QQ Open Platform uses
-app.post("/api/qq-webhook", async (req, res) => {
-  console.log("Received QQ Event Payload:", req.body);
-  
-  // High-level integration outline for Cloudflare translation:
-  // 1. Verify Request Signature using `qqBotConfig.appSecret`
-  // 2. Extract content: const userText = req.body?.d?.content;
-  // 3. Find default API model: 
-  //      const modelId = globalSettings.defaultModelId;
-  //      const model = storedModels.find(m => m.id === modelId);
-  // 4. Send `userText` & `globalSettings.systemPrompt` to `model.baseUrl` using `model.apiKey`.
-  // 5. Stream or wait for text.
-  // 6. Post the return response back to QQ Open API to reply to the user.
-  
-  // Acknowledge receipt to QQ Platform
-  res.status(200).json({ status: "received" });
-});
-
 
 // --- Vite Middleware Server Setup --- 
 async function startServer() {

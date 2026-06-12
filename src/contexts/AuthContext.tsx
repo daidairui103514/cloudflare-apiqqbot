@@ -5,7 +5,9 @@ type Role = "admin" | "guest" | null;
 interface AuthContextType {
   token: string | null;
   role: Role;
-  login: (token: string, role: Role) => void;
+  username: string | null;
+  apiKey: string | null;
+  login: (token: string, role: Role, username: string, apiKey?: string) => void;
   logout: () => void;
   loading: boolean;
 }
@@ -13,6 +15,8 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType>({
   token: null,
   role: null,
+  username: null,
+  apiKey: null,
   login: () => {},
   logout: () => {},
   loading: true,
@@ -21,6 +25,8 @@ const AuthContext = createContext<AuthContextType>({
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [token, setToken] = useState<string | null>(localStorage.getItem("token"));
   const [role, setRole] = useState<Role>(null);
+  const [username, setUsername] = useState<string | null>(null);
+  const [apiKey, setApiKey] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -34,12 +40,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       })
       .then(data => {
          setRole(data.role);
+         setUsername(data.username);
+         setApiKey(data.apiKey || null);
          setLoading(false);
       })
       .catch(() => {
          localStorage.removeItem("token");
          setToken(null);
          setRole(null);
+         setUsername(null);
+         setApiKey(null);
          setLoading(false);
       });
     } else {
@@ -47,10 +57,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, [token]);
 
-  const login = (newToken: string, newRole: Role) => {
+  const login = (newToken: string, newRole: Role, newUsername: string, newApiKey?: string) => {
     localStorage.setItem("token", newToken);
     setToken(newToken);
     setRole(newRole);
+    setUsername(newUsername);
+    setApiKey(newApiKey || null);
   };
 
   const logout = () => {
@@ -60,10 +72,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     localStorage.removeItem("token");
     setToken(null);
     setRole(null);
+    setUsername(null);
+    setApiKey(null);
   };
 
   return (
-    <AuthContext.Provider value={{ token, role, login, logout, loading }}>
+    <AuthContext.Provider value={{ token, role, username, apiKey, login, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );

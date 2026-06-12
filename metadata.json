@@ -1,5 +1,5 @@
 {
-  "name": "OmniModel Aggregator",
+  "name": "AI Proxy Gateway",
   "description": "API aggregator web app for large language models, featuring a chat interface with streaming support, model switching, customizable system prompts, multi-turn contexts, and an admin panel. Provides a backend webhook interface for integrating with QQ Bots.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
