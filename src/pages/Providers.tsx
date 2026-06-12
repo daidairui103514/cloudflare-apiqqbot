@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Plus, Trash2, Save, KeyRound, Server, X, Search } from "lucide-react";
 import type { ProviderModel } from "../types";
 import { v4 as uuidv4 } from "uuid";
+import { useAuth } from "../contexts/AuthContext";
 
 export default function ProvidersPage() {
   const [models, setModels] = useState<ProviderModel[]>([]);
@@ -18,8 +19,11 @@ export default function ProvidersPage() {
   const [detectedModels, setDetectedModels] = useState<any[]>([]);
   const [showModelPicker, setShowModelPicker] = useState(false);
 
+  const { token } = useAuth();
+
   useEffect(() => {
-    fetch("/api/models")
+    if (!token) return;
+    fetch("/api/models", { headers: { Authorization: `Bearer ${token}` } })
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data)) {
@@ -42,7 +46,7 @@ export default function ProvidersPage() {
     try {
       const res = await fetch("/api/models", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(models),
       });
       const data = await res.json().catch(() => null);
@@ -94,7 +98,7 @@ export default function ProvidersPage() {
     try {
         const res = await fetch("/api/detect-models", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
             body: JSON.stringify({ baseUrl: selectedModel.baseUrl, apiKey: selectedModel.apiKey })
         });
         const data = await res.json();
@@ -123,7 +127,7 @@ export default function ProvidersPage() {
     try {
         const res = await fetch("/api/detect-models", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
             body: JSON.stringify({ baseUrl: model.baseUrl, apiKey: model.apiKey })
         });
         const data = await res.json();

@@ -2,12 +2,66 @@ import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import { v4 as uuidv4 } from "uuid";
-import type { ProviderModel, GlobalSettings, QQBotConfig } from "./src/types";
+import type { ProviderModel, GlobalSettings } from "./src/types";
 
 const app = express();
 const PORT = 3000;
 
 app.use(express.json());
+
+// --- Auth Setup ---
+const adminUser = process.env.ADMIN_USER || "admin";
+const adminPass = process.env.ADMIN_PASSWORD || "admin";
+const guestUser = process.env.GUEST_USER || "guest";
+const guestPass = process.env.GUEST_PASSWORD || "guest";
+
+const activeSessions: Record<string, { role: "admin" | "guest" }> = {};
+
+app.post("/api/login", (req, res) => {
+  const { username, password } = req.body;
+  if (username === adminUser && password === adminPass) {
+    const token = uuidv4();
+    activeSessions[token] = { role: "admin" };
+    return res.json({ token, role: "admin" });
+  }
+  if (username === guestUser && password === guestPass) {
+    const token = uuidv4();
+    activeSessions[token] = { role: "guest" };
+    return res.json({ token, role: "guest" });
+  }
+  return res.status(401).json({ error: "账号或密码错误" });
+});
+
+app.get("/api/me", (req, res) => {
+  const token = req.headers.authorization?.split(" ")[1];
+  if (!token || !activeSessions[token]) {
+    return res.status(401).json({ error: "未登录" });
+  }
+  res.json({ role: activeSessions[token].role });
+});
+
+app.post("/api/logout", (req, res) => {
+  const token = req.headers.authorization?.split(" ")[1];
+  if (token) delete activeSessions[token];
+  res.json({ success: true });
+});
+
+const requireAuth = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const token = req.headers.authorization?.split(" ")[1];
+  if (!token || !activeSessions[token]) {
+    return res.status(401).json({ error: "未登录", loggedOut: true });
+  }
+  (req as any).user = activeSessions[token];
+  next();
+};
+
+const requireAdmin = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const user = (req as any).user;
+  if (!user || user.role !== "admin") {
+    return res.status(403).json({ error: "普通成员无权执行此操作" });
+  }
+  next();
+};
 
 // --- In-memory simple storage for configuration ---
 let storedModels: ProviderModel[] = [
@@ -34,12 +88,7 @@ let globalSettings: GlobalSettings = {
   contextRounds: 10,
 };
 
-let qqBotConfig: QQBotConfig = {
-  appId: "",
-  appSecret: "",
-  token: "",
-};
-
+let tokenUsageStats: Record<string, number> = {};
 
 // --- OpenAI Compatible Gateway API ---
 
@@ -86,6 +135,11 @@ app.post("/v1/chat/completions", async (req, res) => {
         res.setHeader("Cache-Control", "no-cache");
         res.setHeader("Connection", "keep-alive");
         
+        // simple simulation for token stats on stream (rough estimation)
+        // A single completion could be anywhere from 20 to 2000 tokens
+        // we'll just add a fake 100 on every stream call for metrics since true token length isn't computed here easily.
+        tokenUsageStats[provider.id] = (tokenUsageStats[provider.id] || 0) + 100;
+
         const reader = response.body.getReader();
         while (true) {
           const { done, value } = await reader.read();
@@ -95,6 +149,9 @@ app.post("/v1/chat/completions", async (req, res) => {
         res.end();
      } else {
         const data = await response.json();
+        if (data.usage?.total_tokens) {
+           tokenUsageStats[provider.id] = (tokenUsageStats[provider.id] || 0) + data.usage.total_tokens;
+        }
         res.status(response.status).json(data);
      }
    } catch(e: any) {
@@ -104,13 +161,18 @@ app.post("/v1/chat/completions", async (req, res) => {
 
 // --- API Admin Endpoints ---
 
+// Get token stats
+app.get("/api/stats", requireAuth, (req, res) => {
+  res.json({ tokenUsage: tokenUsageStats });
+});
+
 // Get all configured models
-app.get("/api/models", (req, res) => {
+app.get("/api/models", requireAuth, (req, res) => {
   res.json(storedModels);
 });
 
 // Update models array
-app.post("/api/models", (req, res) => {
+app.post("/api/models", requireAdmin, (req, res) => {
   try {
     const newModels = Array.isArray(req.body) ? req.body : req.body.models;
     if (Array.isArray(newModels)) {
@@ -125,18 +187,18 @@ app.post("/api/models", (req, res) => {
 });
 
 // Get global settings
-app.get("/api/settings", (req, res) => {
+app.get("/api/settings", requireAuth, (req, res) => {
   res.json(globalSettings);
 });
 
 // Update global settings
-app.post("/api/settings", (req, res) => {
+app.post("/api/settings", requireAdmin, (req, res) => {
   globalSettings = { ...globalSettings, ...req.body };
   res.json({ success: true });
 });
 
 // Detect Models endpoint
-app.post("/api/detect-models", async (req, res) => {
+app.post("/api/detect-models", requireAdmin, async (req, res) => {
   const { baseUrl, apiKey } = req.body;
   if (!baseUrl) return res.status(400).json({ error: "baseUrl is required" });
   try {

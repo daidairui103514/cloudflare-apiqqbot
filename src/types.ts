@@ -11,6 +11,7 @@ export interface GlobalSettings {
   defaultModelId: string;
   streamEnabled: boolean;
   contextRounds: number;
+  gatewayApiKey?: string;
 }
 
 export interface QQBotConfig {

@@ -5,6 +5,17 @@ export async function onRequestPost({ request, env }) {
   }
 
   try {
+    const settings = (await db.get("settings", "json")) || {};
+
+    // Check Gateway API Key if configured
+    if (settings.gatewayApiKey) {
+      const authHeader = request.headers.get("Authorization");
+      const expectedAuth = `Bearer ${settings.gatewayApiKey}`;
+      if (!authHeader || authHeader !== expectedAuth) {
+        return Response.json({ error: { message: "Invalid Gateway API Key. Unauthorized." } }, { status: 401 });
+      }
+    }
+
     const rawBody = await request.text();
     const body = rawBody ? JSON.parse(rawBody) : {};
     const requestedModelCode = body.model;
@@ -13,7 +24,6 @@ export async function onRequestPost({ request, env }) {
     let provider = models.find((m) => m.modelCode === requestedModelCode);
 
     if (!provider) {
-      const settings = (await db.get("settings", "json")) || {};
       provider = models.find((m) => m.id === settings.defaultModelId);
     }
 
@@ -33,7 +43,6 @@ export async function onRequestPost({ request, env }) {
       model: provider.modelCode,
     };
     
-    const settings = (await db.get("settings", "json")) || {};
     // Auto-inject system prompt if missing and not streaming (or modify as needed)
     if (settings.systemPrompt && upstreamPayload.messages) {
        const hasSystem = upstreamPayload.messages.some(m => m.role === "system");
