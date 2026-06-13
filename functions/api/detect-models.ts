@@ -1,4 +1,8 @@
-export async function onRequestPost({ request }) {
+export async function onRequestPost({ request, env }) {
+  const token = request.headers.get("Authorization")?.split(" ")[1];
+  const session = token ? await env.API_DB?.get(`session:${token}`, "json") : null;
+  if (session?.role !== "admin") return Response.json({ error: "无权访问" }, { status: 403 });
+
   try {
      const { baseUrl, apiKey } = await request.json();
      if (!baseUrl) return Response.json({ error: { message: "baseUrl missing" } }, { status: 400 });
