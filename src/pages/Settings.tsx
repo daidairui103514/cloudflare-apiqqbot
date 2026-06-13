@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Save, SlidersHorizontal, Info } from "lucide-react";
 import type { GlobalSettings, ProviderModel } from "../types";
 import { useAuth } from "../contexts/AuthContext";
+import { motion } from "motion/react";
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState<GlobalSettings>({
@@ -72,7 +73,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="h-full flex flex-col p-8 lg:p-12 max-w-4xl mx-auto dark:text-gray-200">
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="h-full flex flex-col p-8 lg:p-12 max-w-4xl mx-auto dark:text-gray-200">
       <div className="flex items-center justify-between mb-8 pb-6 border-b border-gray-200 dark:border-gray-800/60">
         <div>
           <h2 className="text-2xl font-semibold tracking-tight text-gray-900 dark:text-white mb-2">
@@ -95,22 +96,50 @@ export default function SettingsPage() {
 
       <div className="space-y-8 bg-white dark:bg-[#111827] p-8 rounded-2xl border border-gray-200 dark:border-gray-800/60 shadow-sm">
         
-        <div className="space-y-2">
-          <label className="text-sm font-semibold text-gray-900 dark:text-white">默认调用模型节点</label>
-          <select
-            value={settings?.defaultModelId || ""}
-            onChange={(e) => setSettings({ ...settings, defaultModelId: e.target.value })}
-            className="w-full bg-white dark:bg-[#0B1120] border border-gray-300 dark:border-gray-800 rounded-lg p-2.5 text-sm text-gray-900 dark:text-gray-200 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
-          >
-            <option value="">请选择默认模型...</option>
-            {Array.isArray(models) && models.filter(Boolean).map(m => (
-              <option key={m.id || Math.random()} value={m.id || ""}>{m.name || m.modelCode || "未命名"}</option>
-            ))}
-          </select>
-          <p className="text-xs flex items-center gap-1 text-gray-500 dark:text-gray-400 mt-1">
-            <Info className="w-3.5 h-3.5" />
-            当通过网关接口调用未指定模型时，将使用此配置。
-          </p>
+        <div className="space-y-4">
+          <div>
+             <label className="text-sm font-semibold text-gray-900 dark:text-white">默认聚合网关模型</label>
+             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 mb-3">当通过网关接口调用未指定模型时，将使用此配置。</p>
+             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
+                {models.length === 0 && <div className="text-xs text-gray-400">暂无可用模型，请先添加模型节点。</div>}
+                {models.map((m, idx) => (
+                   <button
+                     key={`default-${m.id}-${idx}`}
+                     onClick={() => setSettings({ ...settings, defaultModelId: m.id || "" })}
+                     className={`text-left p-3 rounded-xl border text-sm transition-all flex items-center justify-between flex-shrink-0 ${
+                        settings?.defaultModelId === m.id
+                        ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 ring-1 ring-indigo-500"
+                        : "border-gray-200 dark:border-gray-800 bg-white dark:bg-[#0B1120] text-gray-700 dark:text-gray-300 hover:border-indigo-300 dark:hover:border-indigo-500/50"
+                     }`}
+                   >
+                      <span className="font-medium truncate">{m.name || m.modelCode || "未命名"}</span>
+                      {settings?.defaultModelId === m.id && <div className="w-2 h-2 rounded-full flex-shrink-0 bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.8)]"></div>}
+                   </button>
+                ))}
+             </div>
+          </div>
+          
+          <div className="pt-4 border-t border-gray-100 dark:border-gray-800/60">
+             <label className="text-sm font-semibold text-gray-900 dark:text-white">网页内部AI体验模型</label>
+             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 mb-3">设置当前网页中内置AI助手的对话模型。</p>
+             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
+                {models.length === 0 && <div className="text-xs text-gray-400">暂无可用模型，请先添加模型节点。</div>}
+                {models.map((m, idx) => (
+                   <button
+                     key={`webai-${m.id}-${idx}`}
+                     onClick={() => setSettings({ ...settings, webAiModelId: m.id || "" })}
+                     className={`text-left p-3 rounded-xl border text-sm transition-all flex items-center justify-between flex-shrink-0 ${
+                        settings?.webAiModelId === m.id
+                        ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 ring-1 ring-emerald-500"
+                        : "border-gray-200 dark:border-gray-800 bg-white dark:bg-[#0B1120] text-gray-700 dark:text-gray-300 hover:border-emerald-300 dark:hover:border-emerald-500/50"
+                     }`}
+                   >
+                      <span className="font-medium truncate">{m.name || m.modelCode || "未命名"}</span>
+                      {settings?.webAiModelId === m.id && <div className="w-2 h-2 rounded-full flex-shrink-0 bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]"></div>}
+                   </button>
+                ))}
+             </div>
+          </div>
         </div>
 
         <div className="space-y-2">
@@ -228,6 +257,6 @@ export default function SettingsPage() {
         </div>
 
       </div>
-    </div>
+    </motion.div>
   );
 }

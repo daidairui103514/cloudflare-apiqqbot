@@ -9,6 +9,7 @@ export interface ProviderModel {
 export interface GlobalSettings {
   systemPrompt: string;
   defaultModelId: string;
+  webAiModelId?: string;
   streamEnabled: boolean;
   contextRounds: number;
   gatewayApiKey?: string;

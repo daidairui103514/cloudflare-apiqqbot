@@ -3,6 +3,7 @@ import { Plus, Trash2, Save, KeyRound, Server, X, Search } from "lucide-react";
 import type { ProviderModel } from "../types";
 import { v4 as uuidv4 } from "uuid";
 import { useAuth } from "../contexts/AuthContext";
+import { motion, AnimatePresence } from "motion/react";
 
 export default function ProvidersPage() {
   const [models, setModels] = useState<ProviderModel[]>([]);
@@ -151,12 +152,14 @@ export default function ProvidersPage() {
   }
 
   return (
-    <div className="h-full flex flex-col p-8 lg:p-12 max-w-6xl mx-auto relative dark:text-gray-200">
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="h-full flex flex-col p-8 lg:p-12 max-w-6xl mx-auto relative dark:text-gray-200">
+      <AnimatePresence>
       {toast && (
-        <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 rounded-md shadow-lg font-medium text-sm transition-all duration-300 ${toast.type === 'success' ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20' : 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/20'}`}>
+        <motion.div initial={{ opacity: 0, y: -20, x: "-50%" }} animate={{ opacity: 1, y: 0, x: "-50%" }} exit={{ opacity: 0, y: -20, x: "-50%" }} className={`fixed top-6 left-1/2 z-[100] px-6 py-3 rounded-md shadow-lg font-medium text-sm transition-colors duration-300 ${toast.type === 'success' ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20' : 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/20'}`}>
           {toast.message}
-        </div>
+        </motion.div>
       )}
+      </AnimatePresence>
       <div className="flex items-center justify-between mb-8 pb-6 border-b border-gray-200 dark:border-gray-800/60">
         <div>
           <h2 className="text-2xl font-semibold tracking-tight text-gray-900 dark:text-white mb-2">
@@ -180,9 +183,9 @@ export default function ProvidersPage() {
       {error && <div className="mb-6 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-red-600 dark:text-red-400 px-4 py-3 rounded-md text-sm">{error}</div>}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-20">
-        {models.map((model) => (
+        {models.map((model, idx) => (
           <div 
-            key={model.id} 
+            key={`provider-list-${model.id}-${idx}`} 
             onClick={() => setSelectedModelId(model.id)}
             className="bg-white dark:bg-[#111827] border border-gray-200 dark:border-gray-800/60 hover:border-indigo-400 dark:hover:border-indigo-500 hover:shadow-md cursor-pointer transition-all rounded-xl p-6 relative group flex flex-col items-center text-center h-48 justify-center shadow-sm"
           >
@@ -221,13 +224,22 @@ export default function ProvidersPage() {
       </div>
 
       {/* Modal for Provider Details */}
+      <AnimatePresence>
       {selectedModel && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div 
+        <motion.div key="model-details-modal" className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
               className="absolute inset-0 bg-gray-900/40 backdrop-blur-sm"
               onClick={() => setSelectedModelId(null)}
-            ></div>
-            <div className="relative w-full max-w-lg bg-white dark:bg-[#111827] border border-gray-200 dark:border-gray-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+            ></motion.div>
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="relative w-full max-w-lg bg-white dark:bg-[#111827] border border-gray-200 dark:border-gray-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+            >
                <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/30">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                      <Server className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
@@ -300,23 +312,25 @@ export default function ProvidersPage() {
                      保存
                   </button>
                </div>
-            </div>
-        </div>
+            </motion.div>
+        </motion.div>
       )}
+      </AnimatePresence>
 
       {/* Select Model Global Modal */}
+      <AnimatePresence>
       {showModelPicker && selectedModel && (
-         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-             <div className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm" onClick={() => setShowModelPicker(false)}></div>
-             <div className="relative w-full max-w-sm bg-white dark:bg-[#111827] border border-gray-200 dark:border-gray-800 rounded-xl shadow-2xl flex flex-col max-h-[80vh]">
+         <motion.div key="model-picker-modal" className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm" onClick={() => setShowModelPicker(false)}></motion.div>
+             <motion.div initial={{ opacity: 0, scale: 0.95, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 10 }} className="relative w-full max-w-sm bg-white dark:bg-[#111827] border border-gray-200 dark:border-gray-800 rounded-xl shadow-2xl flex flex-col max-h-[80vh]">
                  <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center bg-gray-50/50 dark:bg-gray-800/30 rounded-t-xl">
                      <h4 className="font-semibold text-gray-900 dark:text-white">选择探测到的模型</h4>
                      <button onClick={() => setShowModelPicker(false)} className="text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"><X className="w-5 h-5"/></button>
                  </div>
                  <div className="p-2 overflow-y-auto flex-1 space-y-1 min-h-[300px]">
-                    {detectedModels.map((m: any) => (
+                    {detectedModels.map((m: any, idx) => (
                         <button
-                           key={m.id}
+                           key={`detected-${m.id}-${idx}`}
                            onClick={() => {
                                updateModel(selectedModel.id, "modelCode", m.id);
                                localStorage.setItem("last_detected_model", m.id);
@@ -328,9 +342,10 @@ export default function ProvidersPage() {
                         </button>
                     ))}
                  </div>
-             </div>
-         </div>
+             </motion.div>
+         </motion.div>
       )}
-    </div>
+      </AnimatePresence>
+    </motion.div>
   );
 }

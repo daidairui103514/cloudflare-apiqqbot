@@ -11,6 +11,7 @@ import WebSettingsPage from "./pages/WebSettings";
 import LoginPage from "./pages/Login";
 import UsersManagePage from "./pages/Users";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import AIChatbot from "./components/AIChatbot";
 
 function MainApp() {
   const { role, logout, loading, username } = useAuth();
@@ -139,6 +140,9 @@ function MainApp() {
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </main>
+
+      {/* Floating AI Chatbot */}
+      <AIChatbot />
     </div>
   );
 }

@@ -25,7 +25,14 @@ export default function LoginPage() {
            headers: { "Content-Type": "application/json" },
            body: JSON.stringify({ username, password })
         });
-        const data = await res.json();
+        let data;
+        const contentType = res.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+            data = await res.json();
+        } else {
+            const text = await res.text();
+            data = { error: `服务器异常 (${res.status}): ${text.substring(0, 50)}` };
+        }
         
         if (!res.ok) {
            throw new Error(data.error || "登录失败");
@@ -38,7 +45,14 @@ export default function LoginPage() {
            headers: { "Content-Type": "application/json" },
            body: JSON.stringify({ username, password, registrationCode })
         });
-        const data = await res.json();
+        let data;
+        const contentType = res.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+            data = await res.json();
+        } else {
+            const text = await res.text();
+            data = { error: `服务器异常 (${res.status}): ${text.substring(0, 50)}` };
+        }
         
         if (!res.ok) {
            throw new Error(data.error || "注册失败");

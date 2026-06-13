@@ -3,6 +3,7 @@ import { Activity, Clock, Server, Database, PieChart as PieChartIcon, Zap, Copy 
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
 import type { GlobalSettings, ProviderModel } from "../types";
 import { useAuth } from "../contexts/AuthContext";
+import { motion } from "motion/react";
 
 export default function DashboardPage() {
   const [models, setModels] = useState<ProviderModel[]>([]);
@@ -53,7 +54,11 @@ export default function DashboardPage() {
 
   return (
     <div className="h-full flex flex-col p-8 lg:p-12 max-w-6xl mx-auto dark:text-gray-100">
-      <div className="mb-8 pb-6 border-b border-gray-200 dark:border-gray-800 flex justify-between items-end">
+      <motion.div 
+        initial={{ opacity: 0, y: -10 }} 
+        animate={{ opacity: 1, y: 0 }} 
+        className="mb-8 pb-6 border-b border-gray-200 dark:border-gray-800 flex justify-between items-end"
+      >
         <div>
            <h2 className="text-2xl font-semibold tracking-tight text-gray-900 dark:text-white mb-2">
              数据看板
@@ -64,11 +69,17 @@ export default function DashboardPage() {
            <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">当前登录账号</p>
            <p className="text-lg font-medium text-indigo-600 dark:text-indigo-400">{username} {role === 'admin' ? '(管理员)' : '(成员)'}</p>
         </div>
-      </div>
+      </motion.div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         {stats.map((stat, i) => (
-          <div key={i} className="bg-white dark:bg-[#111827] p-6 rounded-2xl border border-gray-200 dark:border-gray-800/60 shadow-sm flex items-center justify-between transition-colors">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.1 }}
+            key={`stat-${stat.label}-${i}`} 
+            className="bg-white dark:bg-[#111827] p-6 rounded-2xl border border-gray-200 dark:border-gray-800/60 shadow-sm flex items-center justify-between transition-colors hover:shadow-md"
+          >
              <div className="space-y-2">
                 <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{stat.label}</p>
                 <p className={`text-xl font-semibold text-gray-900 dark:text-gray-100`}>{stat.value}</p>
@@ -76,7 +87,7 @@ export default function DashboardPage() {
              <div className={`p-4 rounded-xl ${stat.bg} ${stat.color}`}>
                 {React.cloneElement(stat.icon as React.ReactElement, { className: "w-6 h-6" })}
              </div>
-          </div>
+          </motion.div>
         ))}
       </div>
       
@@ -134,8 +145,8 @@ export default function DashboardPage() {
                         </tr>
                      </thead>
                      <tbody className="divide-y divide-gray-100 dark:divide-gray-800/60">
-                        {models.map(m => (
-                           <tr key={m.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors">
+                        {models.map((m, i) => (
+                           <tr key={`dashboard-table-${m.id}-${i}`} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors">
                               <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-200">{m.name}</td>
                               <td className="px-4 py-3 text-gray-600 dark:text-gray-400 font-mono text-xs select-all">{m.modelCode}</td>
                               <td className="px-4 py-3 text-emerald-600 dark:text-emerald-400 text-xs flex items-center gap-1.5">
@@ -164,7 +175,7 @@ export default function DashboardPage() {
                  const color = latency < 200 ? "bg-emerald-500" : latency < 350 ? "bg-amber-500" : "bg-red-500";
                  const width = Math.min(100, (latency / 500) * 100);
                  return (
-                    <div key={m.id}>
+                    <div key={`dashboard-latency-${m.id}-${i}`}>
                        <div className="flex justify-between text-xs mb-1">
                           <span className="font-medium text-gray-700 dark:text-gray-300 truncate w-32" title={m.name}>{m.name}</span>
                           <span className="text-gray-500 dark:text-gray-400">{latency} ms</span>

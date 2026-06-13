@@ -162,6 +162,7 @@ let storedModels: ProviderModel[] = [
 let globalSettings: GlobalSettings = {
   systemPrompt: "您是一个极具帮助的智能助理。",
   defaultModelId: "",
+  webAiModelId: "",
   streamEnabled: true,
   contextRounds: 10,
 };
@@ -187,7 +188,9 @@ app.post("/v1/chat/completions", async (req, res) => {
    const requestedModelCode = body.model;
    
    let provider = storedModels.find(m => m.modelCode === requestedModelCode);
-   if (!provider && globalSettings.defaultModelId) {
+   if (requestedModelCode === "web-ai" && globalSettings.webAiModelId) {
+      provider = storedModels.find(m => m.id === globalSettings.webAiModelId);
+   } else if (!provider && globalSettings.defaultModelId) {
       provider = storedModels.find(m => m.id === globalSettings.defaultModelId);
    }
    
